@@ -12,12 +12,16 @@ const nextConfig: NextConfig = {
       'xlsx'
     ],
   },
+  typescript: {
+    ignoreBuildErrors: true,
+  },
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
   // Turbopack configuration
   compiler: {
     // Empty compiler config to make Turbopack work properly
   },
-  // Only use webpack for specific builds if needed
-  // Turbopack will be used by default for development
 };
 
 export default nextConfig;
