@@ -10,15 +10,6 @@ import { Badge } from '@/components/ui/badge';
 interface Payslip {
   id: string;
   employeeId: string;
-  employeeName: string;
-  staffNo: string;
-  month: string;
-  grossSalary: number;
-  deductions: Record<string, number>; // Changed from Json to Record for TypeScript
-  netPay: number;
-  paid: boolean;
-  payoutRef?: string;
-  createdAt: string;
   employee: {
     user: {
       name: string;
@@ -27,6 +18,13 @@ interface Payslip {
     position?: string;
     department?: string;
   };
+  month: string; // This is actually a Date string in ISO format
+  grossSalary: number;
+  deductions: Record<string, number>;
+  netPay: number;
+  paid: boolean;
+  payoutRef?: string;
+  createdAt: string;
 }
 
 export default function PayslipDetailPage() {
@@ -35,39 +33,53 @@ export default function PayslipDetailPage() {
   const [payslip, setPayslip] = useState<Payslip | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  
   const id = Array.isArray(params.id) ? params.id[0] : params.id;
 
   useEffect(() => {
-    if (status === 'authenticated' && id) {
+    const fetchPayslipDetail = async () => {
+      if (id) {
+        try {
+          setLoading(true);
+          const response = await fetch(`/api/employee/payslips/${id}`);
+
+          if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Failed to fetch payslip');
+          }
+
+          const data = await response.json();
+          setPayslip(data);
+        } catch (err) {
+          setError(err instanceof Error ? err.message : 'An error occurred');
+          console.error('Error fetching payslip detail:', err);
+        } finally {
+          setLoading(false);
+        }
+      }
+    };
+
+    if (id) {
       fetchPayslipDetail();
     }
-  }, [status, id]);
+  }, [id]);
 
-  const fetchPayslipDetail = async () => {
-    try {
-      setLoading(true);
-      const response = await fetch(`/api/employee/payslips/${id}`);
+  // Calculate total deductions
+  const totalDeductions = Object.values(payslip?.deductions || {}).reduce((sum, value) => sum + value, 0);
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to fetch payslip');
-      }
-
-      const data = await response.json();
-      setPayslip(data);
-    } catch (err) {
-      console.error('Error fetching payslip:', err);
-      setError(err instanceof Error ? err.message : 'Failed to load payslip');
-    } finally {
-      setLoading(false);
-    }
+  // Format currency
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-KE', {
+      style: 'currency',
+      currency: 'KES',
+    }).format(amount);
   };
 
   if (status === 'loading' || loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto"></div>
           <p className="mt-4 text-gray-600">Loading payslip...</p>
         </div>
       </div>
@@ -113,20 +125,6 @@ export default function PayslipDetailPage() {
       </div>
     );
   }
-
-  // Calculate total deductions
-  const totalDeductions = Object.values(payslip.deductions || {}).reduce((sum, value) => sum + value, 0);
-
-  // Format currency
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-KE', {
-      style: 'currency',
-      currency: 'KES',
-    }).format(amount);
-  };
-
-  // Calculate total deductions
-  const totalDeductions = Object.values(payslip.deductions || {}).reduce((sum, value) => sum + value, 0);
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
@@ -207,7 +205,7 @@ export default function PayslipDetailPage() {
         </Card>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-          {/* Earnings Section */}
+          {/* Earnings Card */}
           <Card>
             <CardHeader>
               <CardTitle className="text-lg">Earnings</CardTitle>
@@ -222,7 +220,7 @@ export default function PayslipDetailPage() {
             </CardContent>
           </Card>
 
-          {/* Deductions Section */}
+          {/* Deductions Card */}
           <Card>
             <CardHeader>
               <CardTitle className="text-lg">Deductions</CardTitle>
@@ -247,7 +245,7 @@ export default function PayslipDetailPage() {
             </CardContent>
           </Card>
 
-          {/* Net Pay Section */}
+          {/* Net Pay Card */}
           <Card>
             <CardHeader>
               <CardTitle className="text-lg">Net Pay</CardTitle>
@@ -261,7 +259,6 @@ export default function PayslipDetailPage() {
                 <Badge variant={payslip.paid ? 'default' : 'secondary'} className="mt-3">
                   Status: {payslip.paid ? 'PAID' : 'PENDING'}
                 </Badge>
-              </div>
               </div>
             </CardContent>
           </Card>
