@@ -46,9 +46,23 @@ export async function processBankTransfer(
       throw new Error('Flutterwave not configured. Payment processing unavailable.');
     }
 
+    // Validate amount before processing
+    if (typeof amount !== 'number' || amount <= 0) {
+      throw new Error(`Invalid amount provided: ${amount}. Amount must be a positive number.`);
+    }
+
+    // Ensure the amount is in the correct format (as an integer in the smallest currency unit if required)
+    // For Flutterwave, amounts are typically in the smallest currency unit (e.g., kobo for NGN)
+    // For KES, we might need to multiply by 100 depending on the Flutterwave configuration
+    const validatedAmount = Math.round(amount);
+
+    if (validatedAmount <= 0) {
+      throw new Error(`Amount must be a positive number after validation. Provided: ${amount}`);
+    }
+
     const payload = {
       account_number: accountNumber,
-      amount: amount,
+      amount: validatedAmount,
       account_bank: accountBank,
       narration: narration,
       currency: 'KES', // Kenyan Shillings

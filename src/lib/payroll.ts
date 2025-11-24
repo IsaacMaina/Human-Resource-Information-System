@@ -67,9 +67,15 @@ export async function processPayrollPayment(
         throw new Error(`Bank code not found for employee ${employeePayment.employeeId}`);
       }
 
+      // Validate amount before processing
+      const paymentAmount = employeePayment.amount;
+      if (typeof paymentAmount !== 'number' || paymentAmount <= 0) {
+        throw new Error(`Invalid payment amount for employee ${employeePayment.employeeId}: ${paymentAmount}. Amount must be a positive number.`);
+      }
+
       // Process bank transfer via Flutterwave
       const response = await processBankTransfer(
-        employeePayment.amount,
+        paymentAmount,
         employeePayment.bankAccNo!,
         bankCode,
         `${description} for ${month.toLocaleString('default', { month: 'long', year: 'numeric' })}`,
@@ -231,7 +237,15 @@ export async function processBulkPayroll(
 
   // Process each payment individually
   for (const employeePayment of employeesPayments) {
-    const result = await processPayrollPayment(employeePayment, month, description);
+    // Ensure amount is properly converted to number
+    const validatedPayment = {
+      ...employeePayment,
+      amount: typeof employeePayment.amount === 'string'
+        ? parseFloat(employeePayment.amount)
+        : Number(employeePayment.amount)
+    };
+
+    const result = await processPayrollPayment(validatedPayment, month, description);
     results.push(result);
   }
 

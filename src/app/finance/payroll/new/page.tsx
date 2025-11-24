@@ -129,7 +129,7 @@ export default function NewPayrollPage() {
 
       const payments = validEmployees.map(emp => ({
         employeeId: emp.id,
-        amount: emp.salary,
+        amount: Number(emp.salary), // Ensure amount is a number
         bankId: emp.bank,
         bankAccNo: emp.bankAccNo,
         phone: emp.phone,
