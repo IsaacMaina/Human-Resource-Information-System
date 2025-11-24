@@ -47,12 +47,12 @@ export default function PayslipDetailPage() {
     try {
       setLoading(true);
       const response = await fetch(`/api/employee/payslips/${id}`);
-      
+
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.error || 'Failed to fetch payslip');
       }
-      
+
       const data = await response.json();
       setPayslip(data);
     } catch (err) {
@@ -87,8 +87,8 @@ export default function PayslipDetailPage() {
         <div className="max-w-md w-full bg-white p-6 rounded-lg shadow-md text-center">
           <h2 className="text-xl font-bold text-red-600 mb-2">Error</h2>
           <p className="text-gray-600 mb-4">{error}</p>
-          <Button 
-            onClick={() => window.history.back()} 
+          <Button
+            onClick={() => window.history.back()}
             className="bg-[#006837] hover:bg-[#004B2E]"
           >
             Go Back
@@ -103,8 +103,8 @@ export default function PayslipDetailPage() {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <p className="text-gray-600">Payslip not found</p>
-          <Button 
-            onClick={() => window.history.back()} 
+          <Button
+            onClick={() => window.history.back()}
             className="mt-4 bg-[#006837] hover:bg-[#004B2E]"
           >
             Go Back
@@ -125,13 +125,16 @@ export default function PayslipDetailPage() {
     }).format(amount);
   };
 
+  // Calculate total deductions
+  const totalDeductions = Object.values(payslip.deductions || {}).reduce((sum, value) => sum + value, 0);
+
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="mb-6 flex justify-between items-center">
           <h1 className="text-2xl font-bold text-gray-900">Payslip Detail</h1>
-          <Button 
-            onClick={() => window.history.back()} 
+          <Button
+            onClick={() => window.history.back()}
             variant="outline"
           >
             Back to Payslips
@@ -147,7 +150,7 @@ export default function PayslipDetailPage() {
                   Employee: {payslip.employee.user.name} ({payslip.employee.staffNo})
                 </p>
               </div>
-              <Badge variant={payslip.paid ? "default" : "secondary"}>
+              <Badge variant={payslip.paid ? 'default' : 'secondary'}>
                 {payslip.paid ? 'Paid' : 'Pending'}
               </Badge>
             </div>
@@ -255,9 +258,10 @@ export default function PayslipDetailPage() {
                   {formatCurrency(payslip.netPay)}
                 </div>
                 <p className="text-gray-500 mt-2">Net Amount</p>
-                <Badge className="mt-3" variant={payslip.paid ? "default" : "secondary"}>
+                <Badge variant={payslip.paid ? 'default' : 'secondary'} className="mt-3">
                   Status: {payslip.paid ? 'PAID' : 'PENDING'}
                 </Badge>
+              </div>
               </div>
             </CardContent>
           </Card>

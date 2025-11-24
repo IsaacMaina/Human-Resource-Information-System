@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server';
-import { prisma } from '../../../../../lib/prisma';
+import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth/next';
-import { authOptions } from '../../../../../lib/authconfig';
+import { authOptions } from '@/lib/authconfig';
 
 // Extend the session type to include our custom properties
 interface CustomSession {
@@ -80,14 +80,14 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    return new Response(JSON.stringify({ 
-      success: true, 
+    return new Response(JSON.stringify({
+      success: true,
       bank: {
         id: newBank.id,
         name: newBank.name,
         code: newBank.code,
         createdAt: newBank.createdAt
-      } 
+      }
     }), {
       status: 201,
       headers: { 'Content-Type': 'application/json' },

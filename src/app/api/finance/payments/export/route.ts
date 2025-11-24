@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server';
-import { prisma } from '../../../../lib/prisma';
+import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth/next';
-import { authOptions } from '../../../../lib/authconfig';
+import { authOptions } from '@/lib/authconfig';
 import * as XLSX from 'xlsx';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -18,170 +18,161 @@ interface CustomSession {
   [key: string]: any;
 }
 
-interface PaymentTransaction {
-  id: string;
-  payoutRef: string;
-  date: Date;
-  amount: number;
-  bank: string;
-  status: string;
-  employees: number;
-}
-
-async function getPaymentTransactions(): Promise<PaymentTransaction[]> {
-  // Get recent payslips with payout references to show as payment transactions
-  const payslips = await prisma.payslip.findMany({
-    where: {
-      payoutRef: { not: null } // Only include payslips that have been paid out
-    },
-    select: {
-      id: true,
-      payoutRef: true,
-      createdAt: true,
-      netPay: true,
-      employee: {
-        select: {
-          bank: {
-            select: {
-              name: true
-            }
-          }
-        }
-      }
-    },
-    orderBy: { createdAt: 'desc' },
-    take: 50 // Limit to last 50 transactions
-  });
-
-  // Group payslips by payout reference and date
-  const groupedPayslips = payslips.reduce((acc, payslip) => {
-    const ref = payslip.payoutRef || 'unknown';
-
-    if (!acc[ref]) {
-      acc[ref] = {
-        id: payslip.id,
-        payoutRef: ref,
-        date: payslip.createdAt,
-        amount: 0,
-        bank: payslip.employee?.bank?.name || 'Unknown',
-        status: 'completed', // Assuming all with payoutRef are completed
-        employees: 0
-      };
-    }
-
-    acc[ref].amount += payslip.netPay;
-    acc[ref].employees += 1;
-
-    return acc;
-  }, {} as Record<string, PaymentTransaction>);
-
-  return Object.values(groupedPayslips).sort((a, b) => b.date.getTime() - a.date.getTime());
-}
-
-export async function GET(req: NextRequest) {
+export async function GET(request: NextRequest) {
   try {
     // Get the session to verify user is authenticated
     const session = await getServerSession(authOptions as any) as CustomSession;
 
-    if (!session || !session.user || (session.user.role !== 'FINANCE' && session.user.role !== 'ADMIN')) {
+    if (!session || !session.user || !session.user.id || (session.user.role !== 'ADMIN' && session.user.role !== 'FINANCE' && session.user.role !== 'HR')) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
         status: 401,
         headers: { 'Content-Type': 'application/json' },
       });
     }
 
-    const searchParams = req.nextUrl.searchParams;
-    const format = searchParams.get('format') || 'pdf';
+    // Get search and filter parameters from query string
+    const url = new URL(request.url);
+    const format = url.searchParams.get('format') || 'excel';
+    const startDate = url.searchParams.get('startDate');
+    const endDate = url.searchParams.get('endDate');
+    const status = url.searchParams.get('status');
+    const department = url.searchParams.get('department');
+    const position = url.searchParams.get('position');
+    const employeeId = url.searchParams.get('employeeId');
 
-    const payments = await getPaymentTransactions();
+    // Build query conditions
+    const whereClause: any = {};
+    
+    if (startDate || endDate) {
+      whereClause.month = {};
+      if (startDate) {
+        whereClause.month.gte = new Date(startDate);
+      }
+      if (endDate) {
+        whereClause.month.lte = new Date(endDate);
+      }
+    }
+    
+    if (status) {
+      whereClause.paid = status === 'paid';
+    }
+
+    // Query payslips with related employee data
+    const payslips = await prisma.payslip.findMany({
+      where: whereClause,
+      include: {
+        employee: {
+          include: {
+            user: true,
+            bank: true,
+          },
+        },
+      },
+      orderBy: {
+        month: 'desc',
+      },
+    });
+
+    // Format payslip data for export
+    const formattedPayslips = payslips.map(payslip => ({
+      id: payslip.id,
+      employeeName: payslip.employee?.user?.name || 'N/A',
+      employeeId: payslip.employeeId,
+      staffNo: payslip.employee?.staffNo || 'N/A',
+      position: payslip.employee?.position || 'N/A',
+      department: payslip.employee?.department || 'N/A',
+      bank: payslip.employee?.bank?.name || 'N/A',
+      bankAccNo: payslip.employee?.bankAccNo || 'N/A',
+      month: payslip.month.toLocaleString('default', { month: 'long', year: 'numeric' }),
+      grossSalary: payslip.grossSalary,
+      netPay: payslip.netPay,
+      paid: payslip.paid ? 'Yes' : 'No',
+      createdAt: payslip.createdAt.toLocaleDateString(),
+      ...payslip.deductions // Spread the deductions object properties
+    }));
 
     if (format === 'pdf') {
+      // Generate PDF
       const doc = new jsPDF();
-      const tableColumn = ["Transaction ID", "Date", "Amount", "Bank", "Employees", "Status"];
-      const tableRows = payments.map(payment => [
-        payment.payoutRef,
-        payment.date.toLocaleDateString(),
-        `KSH ${payment.amount.toLocaleString(undefined, { maximumFractionDigits: 0 })}`,
-        payment.bank,
-        payment.employees,
-        payment.status.charAt(0).toUpperCase() + payment.status.slice(1)
+      doc.setFontSize(18);
+      doc.text('Financial Payments Report', 14, 20);
+      
+      doc.setFontSize(12);
+      doc.text(`Generated on: ${new Date().toLocaleString()}`, 14, 30);
+      
+      // Add a table with the data
+      const tableColumn = [
+        "Employee", "Position", "Department", "Bank", "Gross Salary", "Net Pay", "Status", "Date"
+      ];
+      const tableRows = formattedPayslips.map(item => [
+        item.employeeName,
+        item.position,
+        item.department,
+        item.bank,
+        `KSH ${item.grossSalary.toFixed(2)}`,
+        `KSH ${item.netPay.toFixed(2)}`,
+        item.paid,
+        item.createdAt
       ]);
 
       autoTable(doc, {
         head: [tableColumn],
         body: tableRows,
+        startY: 40,
       });
 
-      const pdfBlob = new Blob([doc.output('blob')], { type: 'application/pdf' });
-
-      return new Response(pdfBlob, {
+      // Return the PDF as a response
+      const pdfBytes = doc.output('blob');
+      
+      return new Response(pdfBytes, {
+        status: 200,
         headers: {
           'Content-Type': 'application/pdf',
-          'Content-Disposition': 'attachment; filename=payment-report.pdf',
+          'Content-Disposition': `attachment; filename=financial-payments-report-${new Date().toISOString().slice(0, 10)}.pdf`,
         },
       });
-    } else if (format === 'excel') {
-      const worksheet = XLSX.utils.json_to_sheet(payments.map(payment => ({
-        "Transaction ID": payment.payoutRef,
-        "Date": payment.date.toLocaleDateString(),
-        "Amount": payment.amount,
-        "Bank": payment.bank,
-        "Employees": payment.employees,
-        "Status": payment.status.charAt(0).toUpperCase() + payment.status.slice(1)
-      })));
+    } else if (format === 'excel' || format === 'xlsx') {
+      // Generate Excel
+      const worksheet = XLSX.utils.json_to_sheet(formattedPayslips);
       const workbook = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(workbook, worksheet, 'Payment Report');
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Financial Payments');
+      
+      // Generate buffer
       const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
-      const excelBlob = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-
-      return new Response(excelBlob, {
+      
+      return new Response(excelBuffer, {
+        status: 200,
         headers: {
           'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-          'Content-Disposition': 'attachment; filename=payment-report.xlsx',
+          'Content-Disposition': `attachment; filename=financial-payments-report-${new Date().toISOString().slice(0, 10)}.xlsx`,
         },
       });
-    } else if (format === 'doc') {
-      const header = "<html xmlns:o='urn:schemas-microsoft-com:office:office' " +
-        "xmlns:w='urn:schemas-microsoft-com:office:word' " +
-        "xmlns='http://www.w3.org/TR/REC-html40'>" +
-        "<head><meta charset='utf-8'><title>Export HTML to Word Document</title></head><body>";
-      const footer = "</body></html>";
-      let html = header;
-      html += '<table>';
-      html += '<thead><tr>';
-      html += '<th>Transaction ID</th><th>Date</th><th>Amount</th><th>Bank</th><th>Employees</th><th>Status</th>';
-      html += '</tr></thead>';
-      html += '<tbody>';
-      payments.forEach(payment => {
-        html += '<tr>';
-        html += `<td>${payment.payoutRef}</td>`;
-        html += `<td>${payment.date.toLocaleDateString()}</td>`;
-        html += `<td>KSH ${payment.amount.toLocaleString(undefined, { maximumFractionDigits: 0 })}</td>`;
-        html += `<td>${payment.bank}</td>`;
-        html += `<td>${payment.employees}</td>`;
-        html += `<td>${payment.status.charAt(0).toUpperCase() + payment.status.slice(1)}</td>`;
-        html += '</tr>';
-      });
-      html += '</tbody></table>';
-      html += footer;
-
-      const docBlob = new Blob([html], { type: 'application/msword' });
-
-      return new Response(docBlob, {
+    } else if (format === 'csv') {
+      // Generate CSV
+      const csvContent = [
+        Object.keys(formattedPayslips[0]),
+        ...formattedPayslips.map(row => Object.values(row))
+      ]
+        .map(row => row.join(','))
+        .join('\n');
+      
+      return new Response(csvContent, {
+        status: 200,
         headers: {
-          'Content-Type': 'application/msword',
-          'Content-Disposition': 'attachment; filename=payment-report.doc',
+          'Content-Type': 'text/csv',
+          'Content-Disposition': `attachment; filename=financial-payments-report-${new Date().toISOString().slice(0, 10)}.csv`,
         },
       });
     } else {
-      return new Response(JSON.stringify({ error: 'Invalid format. Use pdf, excel, or doc.' }), {
-        status: 400,
+      // Default to JSON
+      return new Response(JSON.stringify(formattedPayslips), {
+        status: 200,
         headers: { 'Content-Type': 'application/json' },
       });
     }
   } catch (error) {
-    console.error('Error exporting payments:', error);
-    return new Response(JSON.stringify({ error: 'Failed to export payments' }), {
+    console.error('Error exporting financial payments:', error);
+    return new Response(JSON.stringify({ error: 'Failed to export financial payments' }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' },
     });
