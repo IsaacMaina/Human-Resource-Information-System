@@ -1,3 +1,6 @@
+import { getServerSession } from 'next-auth/next';
+import { redirect } from 'next/navigation';
+import { authOptions } from '@/lib/authconfig';
 import { prisma } from '../../../lib/prisma';
 
 // Disable static generation for this page since it accesses the database
@@ -145,6 +148,12 @@ async function getTaxData(): Promise<{
 }
 
 export default async function TaxSummaryReport() {
+  const session = await getServerSession(authOptions);
+
+  if (!session || !session.user || (session.user.role !== 'ADMIN' && session.user.role !== 'HR' && session.user.role !== 'FINANCE')) {
+    redirect('/auth/login');
+  }
+
   const { summary, monthlyBreakdown } = await getTaxData();
 
   return (

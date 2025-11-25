@@ -1,4 +1,7 @@
+import { getServerSession } from 'next-auth/next';
+import { redirect } from 'next/navigation';
 import Link from 'next/link';
+import { authOptions } from '@/lib/authconfig';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
@@ -6,7 +9,13 @@ export const metadata: Metadata = {
   description: "Access employee self-service functions like leave requests, payslips, and document uploads",
 };
 
-export default function EmployeeFunctions() {
+export default async function EmployeeFunctions() {
+  const session = await getServerSession(authOptions);
+
+  if (!session || !session.user || (session.user.role !== 'EMPLOYEE' && session.user.role !== 'ADMIN' && session.user.role !== 'HR')) {
+    redirect('/auth/login');
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -72,7 +81,7 @@ export default function EmployeeFunctions() {
             </Link>
 
             {/* Notifications */}
-            <Link href="/notifications" className="bg-pink-50 border border-pink-100 rounded-lg p-6 text-center hover:bg-pink-400 hover:text-white transition-colors">
+            <Link href="/employee/notifications" className="bg-pink-50 border border-pink-100 rounded-lg p-6 text-center hover:bg-pink-400 hover:text-white transition-colors">
               <div className="text-pink-600 mb-2">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m4-6h6m0 0v6m0-6l-4 4-4-4" />

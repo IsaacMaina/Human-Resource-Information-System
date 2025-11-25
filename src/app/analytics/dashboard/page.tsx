@@ -1,3 +1,6 @@
+import { getServerSession } from 'next-auth/next';
+import { redirect } from 'next/navigation';
+import { authOptions } from '@/lib/authconfig';
 import { prisma } from '../../../lib/prisma';
 import Link from 'next/link';
 
@@ -173,6 +176,12 @@ async function getDashboardData(): Promise<{
 export const dynamic = 'force-dynamic';
 
 export default async function AnalyticsDashboard() {
+  const session = await getServerSession(authOptions);
+
+  if (!session || !session.user || (session.user.role !== 'ADMIN' && session.user.role !== 'HR' && session.user.role !== 'FINANCE')) {
+    redirect('/auth/login');
+  }
+
   const data = await getDashboardData();
   const { stats, departments, payrollTrend, leaveTypeCounts } = data || {
     stats: {

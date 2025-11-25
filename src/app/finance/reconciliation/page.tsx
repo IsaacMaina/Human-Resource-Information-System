@@ -1,5 +1,6 @@
 'use client';
 
+import { useSession } from 'next-auth/react';
 import { useState, useEffect } from 'react';
 import { prisma } from '../../../lib/prisma';
 import ReconciliationDetails from '../../../components/finance/ReconciliationDetails';
@@ -23,6 +24,7 @@ interface ReconciliationSummary {
 
 // Client component for reconciliation page
 export default function FinanceReconciliation() {
+  const { data: session, status } = useSession();
   const [reconciliationData, setReconciliationData] = useState<ReconciliationData[]>([]);
   const [summary, setSummary] = useState<ReconciliationSummary>({
     totalTransactions: 0,
@@ -40,6 +42,52 @@ export default function FinanceReconciliation() {
   const [pendingResults, setPendingResults] = useState<{ payoutRef: string; reason: string }[]>([]);
   const [discrepancies, setDiscrepancies] = useState<{ payoutRef: string; reason: string }[]>([]);
   const [showDetails, setShowDetails] = useState(false);
+
+  useEffect(() => {
+    if (status === 'unauthenticated') {
+      if (typeof window !== 'undefined') {
+        window.location.href = '/auth/login';
+      }
+    }
+  }, [status]);
+
+  if (status === 'unauthenticated') {
+    if (typeof window !== 'undefined') {
+      window.location.href = '/auth/login';
+    }
+    return null;
+  }
+
+  if (status === 'loading') {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading reconciliation data...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Check if user has finance, admin or HR role
+  if (session?.user?.role !== 'FINANCE' && session?.user?.role !== 'ADMIN' && session?.user?.role !== 'HR') {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="max-w-md w-full bg-white p-8 rounded-lg shadow-md text-center">
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">Access Denied</h1>
+          <p className="text-gray-600 mb-6">
+            You don't have permission to access this page.
+          </p>
+          <a
+            href="/"
+            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700"
+          >
+            Go to Home
+          </a>
+        </div>
+      </div>
+    );
+  }
 
   useEffect(() => {
     fetchReconciliationData();

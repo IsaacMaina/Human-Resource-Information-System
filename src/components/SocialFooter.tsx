@@ -54,40 +54,40 @@ export default function SocialFooter() {
             </div>
           </div>
 
-          {/* Social media links - now displayed in a row on desktop and column on mobile */}
+          {/* Social media links - now displayed as classy icons only */}
           <div className="flex flex-col items-center md:items-end">
             <h3 className="text-lg font-semibold text-[#D4AF37] mb-4">Connect With Us</h3>
-            <div className="flex flex-wrap justify-center md:justify-end gap-3">
+            <div className="flex flex-wrap justify-center md:justify-end gap-4">
               {[
                 {
                   href: "https://web.facebook.com/profile.php?id=61576682944507",
-                  icon: <Facebook size={24} />,
-                  label: "Facebook",
+                  icon: <Facebook size={28} className="hover:scale-110 transition-transform" />,
+                  label: "Follow us on Facebook",
                 },
                 {
                   href: "https://x.com/DevIsaacMaina",
-                  icon: <X size={24} />,
-                  label: "Twitter",
+                  icon: <X size={28} className="hover:scale-110 transition-transform" />,
+                  label: "Follow us on Twitter",
                 },
                 {
                   href: "https://www.instagram.com/devisaacmaina",
-                  icon: <Instagram size={24} />,
-                  label: "Instagram",
+                  icon: <Instagram size={28} className="hover:scale-110 transition-transform" />,
+                  label: "Follow us on Instagram",
                 },
                 {
                   href: "https://www.linkedin.com/in/isaac-maina/?skipRedirect=true",
-                  icon: <Linkedin size={24} />,
-                  label: "LinkedIn",
+                  icon: <Linkedin size={28} className="hover:scale-110 transition-transform" />,
+                  label: "Connect on LinkedIn",
                 },
                 {
                   href: "https://github.com/IsaacMaina",
-                  icon: <Github size={24} />,
-                  label: "GitHub",
+                  icon: <Github size={28} className="hover:scale-110 transition-transform" />,
+                  label: "Check our GitHub",
                 },
                 {
                   href: "https://wa.me/254758302725",
-                  icon: <MessageCircle size={24} />,
-                  label: "WhatsApp",
+                  icon: <MessageCircle size={28} className="hover:scale-110 transition-transform" />,
+                  label: "Chat on WhatsApp",
                 },
               ].map(({ href, icon, label }) => (
                 <a
@@ -95,7 +95,7 @@ export default function SocialFooter() {
                   href={href}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-[#FCF8E3] hover:text-[#D4AF37] transition-colors duration-200 hover:scale-110"
+                  className="text-[#FCF8E3] hover:text-[#D4AF37] transition-all duration-300 hover:scale-125 rounded-full p-2 hover:bg-[#D4AF37]/20"
                   aria-label={label}
                 >
                   {icon}
@@ -103,27 +103,27 @@ export default function SocialFooter() {
               ))}
             </div>
 
-            {/* Contact info in a separate row */}
+            {/* Contact info as icons only */}
             <div className="flex flex-wrap justify-center md:justify-end gap-4 mt-4">
               {[
                 {
                   href: "mailto:mainaisaacwachira2000@gmail.com",
-                  icon: <Mail size={18} />,
-                  label: "Email",
+                  icon: <Mail size={24} className="hover:scale-110 transition-transform" />,
+                  label: "Email us",
                 },
                 {
                   href: "tel:+254758302725",
-                  icon: <Phone size={18} />,
-                  label: "Phone",
+                  icon: <Phone size={24} className="hover:scale-110 transition-transform" />,
+                  label: "Call us",
                 },
               ].map(({ href, icon, label }) => (
                 <a
                   key={label}
                   href={href}
-                  className="text-[#FCF8E3] hover:text-[#D4AF37] text-sm flex items-center space-x-1 transition-colors duration-200"
+                  className="text-[#FCF8E3] hover:text-[#D4AF37] transition-all duration-300 hover:scale-125 rounded-full p-2 hover:bg-[#D4AF37]/20"
+                  aria-label={label}
                 >
                   {icon}
-                  <span>{label}</span>
                 </a>
               ))}
             </div>

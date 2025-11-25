@@ -1,4 +1,7 @@
 import Link from 'next/link';
+import { getServerSession } from 'next-auth/next';
+import { redirect } from 'next/navigation';
+import { authOptions } from '@/lib/authconfig';
 import { prisma } from '../../../lib/prisma';
 
 // Disable static generation for this page since it accesses the database
@@ -77,6 +80,12 @@ interface FinancePaymentsProps {
 }
 
 export default async function FinancePayments({ searchParams }: FinancePaymentsProps) {
+  const session = await getServerSession(authOptions);
+
+  if (!session || !session.user || (session.user.role !== 'FINANCE' && session.user.role !== 'ADMIN' && session.user.role !== 'HR')) {
+    redirect('/auth/login');
+  }
+
   const payments = await getPaymentTransactions();
 
   // Server-side export functions that return downloadable links

@@ -27,7 +27,7 @@ interface Notification {
   };
 }
 
-export default function NotificationsPage() {
+export default function EmployeeNotificationsPage() {
   const { data: session, status } = useSession();
 
   useEffect(() => {

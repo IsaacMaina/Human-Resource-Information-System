@@ -100,6 +100,12 @@ async function getFinanceDashboardData(): Promise<{
 }
 
 export default async function FinanceDashboard() {
+  const session = await getServerSession(authOptions);
+
+  if (!session || !session.user || (session.user.role !== 'FINANCE' && session.user.role !== 'ADMIN' && session.user.role !== 'HR')) {
+    redirect('/auth/login');
+  }
+
   const { recentTransactions, financialSummary } = await getFinanceDashboardData();
 
   return (

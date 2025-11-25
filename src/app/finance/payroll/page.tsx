@@ -1,5 +1,6 @@
 'use client';
 
+import { useSession } from 'next-auth/react';
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
 
@@ -14,11 +15,58 @@ interface PayrollSummary {
 }
 
 export default function FinancePayroll() {
+  const { data: session, status } = useSession();
   const [payrolls, setPayrolls] = useState<PayrollSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(5);
   const [totalPages, setTotalPages] = useState(1);
+
+  useEffect(() => {
+    if (status === 'unauthenticated') {
+      if (typeof window !== 'undefined') {
+        window.location.href = '/auth/login';
+      }
+    }
+  }, [status]);
+
+  if (status === 'unauthenticated') {
+    if (typeof window !== 'undefined') {
+      window.location.href = '/auth/login';
+    }
+    return null;
+  }
+
+  if (status === 'loading') {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading payroll data...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Check if user has finance, admin or HR role
+  if (session?.user?.role !== 'FINANCE' && session?.user?.role !== 'ADMIN' && session?.user?.role !== 'HR') {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="max-w-md w-full bg-white p-8 rounded-lg shadow-md text-center">
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">Access Denied</h1>
+          <p className="text-gray-600 mb-6">
+            You don't have permission to access this page.
+          </p>
+          <Link
+            href="/"
+            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700"
+          >
+            Go to Home
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   // Pagination state
   const [paginatedPayrolls, setPaginatedPayrolls] = useState<PayrollSummary[]>([]);
