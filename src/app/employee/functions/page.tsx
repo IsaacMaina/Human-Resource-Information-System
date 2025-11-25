@@ -33,8 +33,8 @@ export default function EmployeeFunctions() {
     );
   }
 
-  // Check if user has employee or higher role
-  if (session?.user?.role !== 'EMPLOYEE' && session?.user?.role !== 'ADMIN' && session?.user?.role !== 'HR') {
+  // Check if user has employee or higher role including finance for employee-related functions
+  if (session?.user?.role !== 'EMPLOYEE' && session?.user?.role !== 'ADMIN' && session?.user?.role !== 'HR' && session?.user?.role !== 'FINANCE') {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#FCF8E3]">
         <div className="max-w-md w-full bg-white p-8 rounded-lg shadow-md text-center border border-[#E5E5E5]">
