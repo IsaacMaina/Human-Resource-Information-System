@@ -38,26 +38,44 @@ export default async function EmployeeDashboard() {
   });
 
   if (!employee) {
-    redirect('/auth/login');
+    // If no employee record is found, redirect to a page explaining the issue
+    // or create a basic employee profile if needed
+    console.error(`No employee record found for user ID: ${session.user.id}`);
+    // Instead of redirecting to login, we should redirect to a page that explains the issue
+    // or allow them to create an employee profile
+    redirect('/auth/login'); // This is appropriate for now
   }
 
   // Fetch recent activities for the employee
-  const activities = await prisma.activity.findMany({
-    where: { employeeId: employee.id },
-    orderBy: { timestamp: 'desc' },
-    take: 5 // Take only 5 most recent activities
-  });
+  let activities = [];
+  try {
+    activities = await prisma.activity.findMany({
+      where: { employeeId: employee.id },
+      orderBy: { timestamp: 'desc' },
+      take: 5 // Take only 5 most recent activities
+    });
+  } catch (error) {
+    console.error('Error fetching activities:', error);
+    activities = []; // Default to empty array if there's an error
+  }
 
   // Fetch current year's leave allocation
   const currentYear = new Date().getFullYear();
-  const leaveAllocation = await prisma.leaveAllocation.findUnique({
-    where: {
-      employeeId_year: {
-        employeeId: employee.id,
-        year: currentYear
+  let leaveAllocation = null;
+  try {
+    leaveAllocation = await prisma.leaveAllocation.findUnique({
+      where: {
+        employeeId_year: {
+          employeeId: employee.id,
+          year: currentYear
+        }
       }
-    }
-  });
+    });
+  } catch (error) {
+    console.error('Error fetching leave allocation:', error);
+    // If there's an error fetching leave allocation, continue without it
+    leaveAllocation = null;
+  }
 
   const timeAgo = (dateString: string) => {
     const date = new Date(dateString);
